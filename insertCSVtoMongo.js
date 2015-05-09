@@ -11,8 +11,9 @@ MongoClient = require('mongodb').MongoClient;
 
 
 // CLI arg constants
-var NUM_ARGS = 3,
-    CSV_ARG  = 2;
+var NUM_ARGS = 4,
+    CSV_ARG  = 2,
+    JSON_ARG = 3;
 
 
 // Connection constants
@@ -35,14 +36,22 @@ Given CLI args, checks them for what is expected
 var checkArgs = function(args){
   // Check for expected number of args
   if (args.length != NUM_ARGS) {
-    console.error('usage: node insertCSVToMongo.js [path/to/file.csv]');
+    console.error('usage: node insertCSVToMongo.js [path/to/file.csv] [path/to/output_file.json]');
     process.exit(1);
   }
 
   // Check for read access on the CSV path
   fs.access(args[CSV_ARG], fs.R_OK, function(error) {
     if (error) {
-      console.error('Cannot open "' + args[CSV_ARG] + '" for reading.');
+      console.error('Cannot access "' + args[CSV_ARG] + '" for reading: ' + error);
+      process.exit(1);
+    }
+  });
+
+  // Check for existing file on the JSON path
+  fs.access(args[JSON_ARG], fs.F_OK, function(error) {
+    if (!error) {
+      console.error(args[JSON_ARG] + ' already exists. Please choose another path.');
       process.exit(1);
     }
   });
@@ -52,27 +61,19 @@ var checkArgs = function(args){
 /*
 Given a path to a valid CSV file, returns an array of objects converted from the CSV rows
  */
-var getJSONFromCSV = function(csvPath) {
-  // Convert CSV to JSON array using csvtojson
-  var csvFileStream = fs.createReadStream(csvPath);
-
+var getJSONFromCSV = function(csvPath, outputJsonPath) {
   var convertParams = {
-    'constructResult': false,   // As CSV can be large, don't put it all in memory
+    'constructResult': false,   // Don't place JSON in memory, as input data can be large
     'ignoreEmpty':     true     // Ignore empty columns, as we don't need them in Mongo
   };
 
   var csvConverter = new CSVtoJSONConverter(convertParams);
 
-  var jsonOutput = {};
-  // Once stream is finished parsing, store the JSON
-  csvConverter.on('end_parsed', function(jsonObject) {
-    jsonOutput = jsonObject;
-  });
+  var readStream = fs.createReadStream(csvPath);
+  var writeStream = fs.createWriteStream(outputJsonPath);
 
-  // Pipe file stream to the converter
-  csvFileStream.pipe(csvConverter);
-
-  return jsonOutput;
+  // Pipe read stream to the converter, to the write stream
+  readStream.pipe(csvConverter).pipe(writeStream);
 };
 
 
@@ -81,12 +82,10 @@ Given a BulkWriteResult object, prints out useful information to user about what
  */
 var printResults = function(result) {
   console.log('Number of objects inserted: ' + result.nInserted);
-  console.log('Number of errors: ' + result.writeErrors.length);
 
-  // If errors occurred, output the messages as errors
-  result.writeErrors.forEach(function(error, index) {
-    console.error('Error ' + index + ': ' + error.errmsg);
-  });
+  if (result.writeError) {
+    console.log('Error was encountered: ' + result.writeError.errmsg);
+  }
 };
 
 
@@ -101,39 +100,25 @@ var printResults = function(result) {
 // Validate CLI args
 checkArgs(process.argv);
 
+// Perform the CSV to JSON conversion
+getJSONFromCSV(process.argv[CSV_ARG], process.argv[JSON_ARG]);
+
+// Give feedback on conversion
+console.log('CSV successfully converted to JSON.');
+
 
 // Connect and get reference to DB
 MongoClient.connect(MONGO_URL, function(error, db) {
-  if (!error) {
-    console.log('Connected to database!');
-  } else {
+  if (error) {
     console.error('Cannot connect to DB: ' + error.message);
     process.exit(1);
   }
 
-  // Create new collection
-  db.createCollection('train', function(error, collection) {
-    if (error) {
-      console.error('Cannot create new collection: ' + error.message);
-    }
-  });
+  console.log('Connected to database!');
 
-  // Initialise unsorted collection for bulk insert operations
-  var bulk = db.train.initializeUnorderedBulkOp();
-
-
-  // Process the JSON array into Mongo insert statements
-  getJSONFromCSV(process.argv[CSV_ARG]).forEach(function(object, index){
-    bulk.insert(object);
-  });
-
-
-  // Execute all the "bulked" insert operations
-  var result = bulk.execute();
-
-
-  // Output results of the bulk write to user
-  printResults(result);
+  var trainsCollection = db.collection('train');
+  var docs = getJSONFromCSV(process.argv[CSV_ARG]);
+  console.log(docs);
 });
 
 
