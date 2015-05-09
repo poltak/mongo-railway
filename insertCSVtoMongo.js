@@ -11,9 +11,8 @@ MongoClient = require('mongodb').MongoClient;
 
 
 // CLI arg constants
-var NUM_ARGS = 4,
-    CSV_ARG  = 2,
-    JSON_ARG = 3;
+var NUM_ARGS = 3,
+    CSV_ARG  = 2;
 
 
 // Connection constants
@@ -21,6 +20,11 @@ var HOST    = '127.0.0.1',
     PORT    = '27017',
     DB_NAME = 'railway',
     MONGO_URL = 'mongodb://' + HOST + ':' + PORT + '/' + DB_NAME;
+
+
+// Intermediate JSON path
+var JSON_OUTPUT_PATH = '/Volumes/RAM Disk/csv_to_json_mongo.json';
+
 
 
 
@@ -36,7 +40,7 @@ Given CLI args, checks them for what is expected
 var checkArgs = function(args){
   // Check for expected number of args
   if (args.length != NUM_ARGS) {
-    console.error('usage: node insertCSVToMongo.js [path/to/file.csv] [path/to/output_file.json]');
+    console.error('usage: node insertCSVToMongo.js [path/to/file.csv]');
     process.exit(1);
   }
 
@@ -49,9 +53,9 @@ var checkArgs = function(args){
   });
 
   // Check for existing file on the JSON path
-  fs.access(args[JSON_ARG], fs.F_OK, function(error) {
+  fs.access(JSON_OUTPUT_PATH, fs.F_OK, function(error) {
     if (!error) {
-      console.error(args[JSON_ARG] + ' already exists. Please choose another path.');
+      console.error(JSON_OUTPUT_PATH + ' already exists. Please choose another path.');
       process.exit(1);
     }
   });
@@ -59,33 +63,70 @@ var checkArgs = function(args){
 
 
 /*
-Given a path to a valid CSV file, returns an array of objects converted from the CSV rows
+Given a path to a valid CSV file and a callback, converts CSV to JSON and inserts to DB using callback.
+
+Callback is run after conversion is finished.
  */
-var getJSONFromCSV = function(csvPath, outputJsonPath) {
+var JSONFromCSV = function(csvPath, callback) {
   var convertParams = {
     'constructResult': false,   // Don't place JSON in memory, as input data can be large
-    'ignoreEmpty':     true     // Ignore empty columns, as we don't need them in Mongo
+    'ignoreEmpty':     true,    // Ignore empty columns, as we don't need them in Mongo
+    'toArrayString':   true     // Make resulting objects put into an array
   };
 
   var csvConverter = new CSVtoJSONConverter(convertParams);
 
   var readStream = fs.createReadStream(csvPath);
-  var writeStream = fs.createWriteStream(outputJsonPath);
+  var writeStream = fs.createWriteStream(JSON_OUTPUT_PATH);
 
   // Pipe read stream to the converter, to the write stream
   readStream.pipe(csvConverter).pipe(writeStream);
+
+  writeStream.on('finish', callback);
 };
 
 
 /*
-Given a BulkWriteResult object, prints out useful information to user about what was written to DB
+Deals with connecting to database and performing writes of converted JSON
  */
-var printResults = function(result) {
-  console.log('Number of objects inserted: ' + result.nInserted);
+var performDBWrite = function() {
+  MongoClient.connect(MONGO_URL, function(error, db) {
+    if (error) {
+      console.error('Cannot connect to DB: ' + error.message);
+      process.exit(1);
+    }
 
-  if (result.writeError) {
-    console.log('Error was encountered: ' + result.writeError.errmsg);
-  }
+    console.error('Connected to database!');
+
+    var trainsCollection = db.collection('train');
+
+    fs.readFile(JSON_OUTPUT_PATH, 'utf8', function(error, data) {
+      if (error)  console.error('Could not open file for reading: ' + JSON_OUTPUT_PATH);
+
+      var objects = JSON.parse(data);
+      console.log('Number of objects to attempt to insert: ' + objects.length);
+
+      // Queue up insertions for batch operation
+      var batch = trainsCollection.initializeUnorderedBulkOp({useLegacyOps: true});
+
+      objects.forEach(function(object, index) {
+        batch.insert(object);
+      });
+
+      // Execute set-up batch operation
+      batch.execute(function(error, result) {
+        if (error)  console.error(error);
+
+        console.error('Number of objects inserted: ' + result.nInserted);
+        db.close();
+      });
+
+      // Remove intermediate JSON file
+      fs.unlink(JSON_OUTPUT_PATH, function(error) {
+        if (error)  console.error('Cannot remove temporary JSON output. Stored at: ' + JSON_OUTPUT_PATH);
+      });
+    });
+  });
 };
 
 
@@ -101,24 +142,4 @@ var printResults = function(result) {
 checkArgs(process.argv);
 
 // Perform the CSV to JSON conversion
-getJSONFromCSV(process.argv[CSV_ARG], process.argv[JSON_ARG]);
-
-// Give feedback on conversion
-console.log('CSV successfully converted to JSON.');
-
-
-// Connect and get reference to DB
-MongoClient.connect(MONGO_URL, function(error, db) {
-  if (error) {
-    console.error('Cannot connect to DB: ' + error.message);
-    process.exit(1);
-  }
-
-  console.log('Connected to database!');
-
-  var trainsCollection = db.collection('train');
-  var docs = getJSONFromCSV(process.argv[CSV_ARG]);
-  console.log(docs);
-});
-
-
+JSONFromCSV(process.argv[CSV_ARG], performDBWrite);
