@@ -1,0 +1,41 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[paper=a4paper,left=30mm,width=150mm,top=25mm,bottom=25mm]{geometry}
+\usepackage[hidelinks]{hyperref}    % All references will auto hyperlink
+\usepackage[font={small}]{caption}  % Make figure captions smaller
+\usepackage{graphicx}               % For the displaying of images in floats
+\usepackage{mathtools}              % For more advanced math usage
+\usepackage{poltakmacros}           % Personal macro package (https://gist.github.com/poltak/6ed59e8f30c9c399143f)
+
+
+
+\begin{document}
+
+\include{titlepage}                 % Pull in title page
+
+\newpage
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+
+\pagenumbering{arabic}
+
+
+\section{Introduction} % (fold)
+\label{sec:introduction}
+
+
+% section introduction (end)
+
+
+
+
+
+
+
+\newpage                            % Make references section
+
+\bibliographystyle{acm}
+\bibliography{biblio.tex}
+
+\end{document}
