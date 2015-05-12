@@ -24,14 +24,81 @@
 \section{Introduction} % (fold)
 \label{sec:introduction}
 
+While relational database management systems (RDBMS) have been somewhat of a ``go-to'' solution for for a number of years
+for general data storage and management problems that many application developers face, we have noted a recent rise
+in the use of non-relational data management tools~\cite{padhy2011rdbms}. Most of these tools have traditionally fallen into the domain of
+big data analytics, with platforms such as the Hadoop ecosystem~\footnote{https://hadoop.apache.org/} being notably popular.
+However, outside of the domain of big data, looking more at general purpose data storage and management, what are now
+commonly referred to as ``NoSQL'' solutions are proving to be a popular solution.
+
+NoSQL databases refer to those databases that are not built on top of the relational algebraic concepts, as laid out by
+Codd in 1970~\cite{codd1970relational}, unlike the more commonly used RDBMS technologies, such as
+MySQL~\footnote{https://www.mysql.com/}. Being free of the strictness the relational model enforces on its data allows
+NoSQL databases to focus less on the overall structure of data, and more on factors such as scalability and
+performance~\cite{leavitt2010will}.
+
+While the relational model is a good fit for many data problems, its strictness in terms of flexibility of managing data
+eventually led to the introduction of the NoSQL model. The following characteristics can be given as a starting point
+for NoSQL databases in comparison to relational databases~\cite{indrawan2012database}:
+
+\begin{itemize}
+  \item \textbf{Unstructured data support:} While the relational model would often force data to be stored in tabular
+  formats, the NoSQL model does not force any kind of data schema.
+  \item \textbf{Designed with distributed processing and horizontal scalability in mind:} Given the commoditisation of
+  computer hardware in the last decade, support for horizontal scaling and processing among clusters is an important
+  factor for adoption.
+  \item \textbf{Less strict adherence to ACID principles:} While the relational model attempted to very much adhere to
+  the transactional principles of data atomicty, consistency, isolation, and durability (ACID), this very much impacts
+  performance in terms of distributed computing. Relaxing the strictness of adherence to these principles, allow many
+  NoSQL databases to make the trade-off for higher performance.
+\end{itemize}
+
+Of course, these differences between the NoSQL model and relational model vary between each individual database
+technology's design, and trade-offs are often made depending on the goals and aims for that given database.
+
+In this paper, we will look at the use of MongoDB~\footnote{https://www.mongodb.org/}, a popular NoSQL database solution,
+as a solution for a case study based upon a railway data problem using data from Monash University's Institute of Railway
+Technology (IRT). An overview of the case study in question will be given in~\sectref{sec:case_study_overview}. A small
+overview of the research already in this area will be given in~\sectref{sec:research_context}. Implementation and
+evaluation details will be given in~\sectref{sec:implementation} and~\sectref{sec:evaluation_and_discussion}, respectively,
+before concluding in~\sectref{sec:conclusion}.
 
 % section introduction (end)
 
+\newpage
 
+\section{Case Study Overview} % (fold)
+\label{sec:case_study_overview}
 
+% section case_study_overview (end)
 
+\newpage
 
+\section{Research Context} % (fold)
+\label{sec:research_context}
 
+% section research_context (end)
+
+\newpage
+
+\section{Implementation} % (fold)
+\label{sec:implementation}
+
+% section implementation (end)
+
+\newpage
+
+\section{Evaluation and Discussion} % (fold)
+\label{sec:evaluation_and_discussion}
+
+% section evaluation_and_discussion (end)
+
+\newpage
+
+\section{Conclusion} % (fold)
+\label{sec:conclusion}
+
+% section conclusion (end)
 
 \newpage                            % Make references section
 
