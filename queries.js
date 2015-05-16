@@ -90,6 +90,15 @@ function latLon() {
   };
 
   db.train.find().snapshot().forEach(updateDocsFunc);
+
+  // Create a geospatial index on Loc nested document
+  db.train.createIndex({'Loc': '2d'});
+
+  // Create an index on km field
+  db.train.createIndex({'km': 1});
+
+  // Find all documents stating a value less than 0 for KM travelled (these are obviously wrong)
+  db.train.find({'km': {'$lt': 0}});
 }
 
 
