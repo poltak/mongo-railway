@@ -102,7 +102,7 @@ the expectation of better handling of the given inconsistent data.
 \label{sec:mongo_overview}
 
 \textit{Note that most of the information relevant to MongoDB in this section is sourced from the official MongoDB
-manual.~\cite{The M0:online}}
+manual.}~\cite{Mongo_man}
 
 \subsection{Data storage} % (fold)
 \label{sub:data_storage}
@@ -113,14 +113,13 @@ BSON~\cite{bsons6:online}, which allows for strongly typed data fields and binar
 within ``collections'' which reside in a given ``database''~\cite{parker2013comparing}. To relate back to the relational
 model, these concepts within Mongo can be compared as shown in~\tabref{tab:mongo_to_relational}.
 
-\begin{table}[H]
+\begin{table}[h]
 \centering
 \caption{MongoDB conceptual structures as they relate to the relational model concepts.}
 \label{tab:mongo_to_relational}
 \begin{tabular}{ | l | l | }
 
 \hline
-\rowcolor{gray!20}
 \textbf{MongoDB}  & \textbf{Relational Model} \\ \hline
 Database          & Database                  \\ \hline
 Collection        & Table                     \\ \hline
@@ -171,11 +170,55 @@ to limit the amount of documents to process.
 \subsection{Further database features} % (fold)
 \label{sub:further_database_features}
 
-MongoDB also allows for common database operations, such as indexing, replication, and sharding. Mongo's indexing system
-supports multiple types of indexes, including single key, multi-key, geospatial, and hashed indexes. Indexes are stored
-internally using a B-Tree data structure
+\subsubsection{Lack of joins} % (fold)
+\label{ssub:joins}
 
-In terms of joins, MongoDB,
+MongoDB, like many other NoSQL databases, does not support the joins of multiple tables or, in MongoDB's case, documents,
+as is common in relational databases.
+Instead, MongoDB allows two main ways of relating different documents to each other. These are via referencing and
+nested documents. Nested documents are the main recommended way of join multiple documents, unless the documents have
+many-to-many relationships. To allow nested documents, a BSON value can store a whole other document, or arrays of documents.
+Example use-cases of where nested documents are appropriate include documents that have natural ``child'' documents that
+only it will ever need to reference. For example, a blog post document may have many nested comment documents as the
+comments are specific to a given blog post. For documents where many things may refer to it, it is recommended to use
+references via BSON values containing other document IDs.
+
+% subsubsection joins (end)
+
+\subsubsection{Indexing} % (fold)
+\label{ssub:indexing}
+
+Indexing in MongoDB is supported in a similar ways that are present in relational databases. Mongo builds a B-Tree data
+structure on a particular collection's key, allowing all documents within that collection with that key to be accessed
+in $O(log n)$ time, as opposed to $O(n)$ time if unindexed. MongoDB also supports numerous types of indexes, such as
+single-key, multi-key, geospatial, and hashed indexes.
+
+% subsubsection indexing (end)
+
+\subsubsection{Replication} % (fold)
+\label{ssub:replication}
+
+MongoDB allows replication and management of multiple copies of the same data for the purpose of increasing data
+redundancy and availability. Replication in Mongo is managed using a primary instance of data, with secondaries replicating
+the data in the primary using operation logs (\textit{oplogs}) to mimic any operations on data that were performed in the
+primary. Replicas have fault tolerance in the way that if the primary fails, an election is started to promote any of the
+secondaries to become a primary. In general, a client will only interact with a primary, however operations can also be
+specified to be performed on specific secondaries. However, as replication data is asynchronously managed, any reads
+performed specifically on secondaries may not give up-to-date data.
+
+% subsubsection replication (end)
+
+\subsubsection{Sharding} % (fold)
+\label{ssub:sharding}
+
+Sharding in MongoDB allows for horizontal scaling of a Mongo database, where a given database or collection is shared
+among different ``shards'', or multiple MongoDB instances, generally running on separate machines. Sharding is performed
+on an indexed document key, dividing documents containing that key based on either range or computed hashes. Ranged-based
+sharding is generally recommended where data is generally expected to be accessed in some sort of sequence, while hash-based
+sharding offers a guaranteed random distribution of data across shards, and more balanced equally-sized shards.
+
+% subsubsection sharding (end)
+
 
 % subsection further_database_features (end)
 
