@@ -222,15 +222,68 @@ sharding offers a guaranteed random distribution of data across shards, and more
 
 % subsection further_database_features (end)
 
-
 % section mongo_overview (end)
+
 
 \newpage
 
 \section{Implementation} % (fold)
 \label{sec:implementation}
 
+Implementation of the database for the given Monash IRT data was all performed using MongoDB version 3.0.3, the latest
+version as of 2015-05-18. Interaction with the MongoDB database was all performed using the mongo shell and corresponding
+official NodeJS MongoDB driver.
+
+\subsection{Overview of the data} % (fold)
+\label{sub:overview_of_the_data}
+
+The test data used for this case study was acquired from the Monash IRT team, and was an extract of real data they have
+received from the railway sensors. As only one set of data was given, simulated datasets based upon the extract have
+also been created to simulate the type of inconsistencies the IRT team are facing, including differently structured
+datasets and datasets with missing data (in the case of non-functional sensors).
+
+The dataset received from the IRT team has the layout as shown in~\tabref{tab:irt_data}. It consists of 99999 data points
+recorded at different times. The data received in this dataset is all consistent and contains readings from all the sensors.
+As this is not the case in with real data over time, simulated data has been used as stated previously. The only
+guaranteed data to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{Lon} sensor recordings.
+
+
+\begin{table}[h]
+\caption{The different types of data received from the Monash University Institute of Railway Technology team.}
+\label{tab:irt_data}
+\tabcolsep=0.11cm
+\scalebox{0.7}{
+\begin{tabular}{ | l | l | l | }
+
+\hline
+\textbf{Data name}      & \textbf{Possible values}               & \textbf{Meaning} \\ \hline
+\textbf{Time}           & Floating point value                   & Time in milliseconds since... \\ \hline
+\textbf{Speed}          & Floating point value                   & Speed in km/h (?)  \\ \hline
+\textbf{LoadEmpty}      & -1, 0                                  & Boolean flag denoting whether or not load is present in train cars.  \\ \hline
+\textbf{km}             & Floating point value                   & Amount of kilometres travelled since...  \\ \hline
+\textbf{Lat}            & Floating point value from -90 to +90   & Geographic latitude coordinate at given reading.  \\ \hline
+\textbf{Lon}            & Floating point value from -180 to +180 & Geographic longitude coordinate at given reading.  \\ \hline
+\textbf{Track}          & Integer value from 1 to 213841         & Given track in which the train is located.   \\ \hline
+\textbf{SND1}           & Floating point value                   & ?  \\ \hline
+\textbf{SND2}           & Floating point value                   & ?  \\ \hline
+\textbf{SND3}           & Floating point value                   & ?  \\ \hline
+\textbf{SND4}           & Floating point value                   & ?  \\ \hline
+\textbf{CouplerForce}   & Floating point value                   & The amount of force couple detected in the train car.  \\ \hline
+\textbf{LateralAccel}   & Floating point value                   & The amount of lateral acceleration detected in the train car.  \\ \hline
+\textbf{AccLeft}        & Floating point value                   & The amount of acceleration detected by the left sensor.  \\ \hline
+\textbf{AccRight}       & Floating point value                   & The amount of acceleration detected by the right sensor.  \\ \hline
+\textbf{BounceFront}    & Floating point value                   & The amount of bounce detected at the front of the car.  \\ \hline
+\textbf{BounceRear}     & Floating point value                   & The amount of bounce detected at the rear of the car.  \\ \hline
+\textbf{RockFront}      & Floating point value                   & The amount of rock detected at the front of the car.  \\ \hline
+\textbf{RockRear}       & Floating point value                   & The amount of rock detected at the front of the car.  \\ \hline
+
+\end{tabular}}
+\end{table}
+
+% subsection overview_of_the_data (end)
+
 % section implementation (end)
+
 
 \newpage
 
@@ -238,6 +291,7 @@ sharding offers a guaranteed random distribution of data across shards, and more
 \label{sec:evaluation_and_discussion}
 
 % section evaluation_and_discussion (end)
+
 
 \newpage
 
