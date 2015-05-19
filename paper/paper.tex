@@ -242,11 +242,9 @@ received from the railway sensors. As only one set of data was given, simulated 
 also been created to simulate the type of inconsistencies the IRT team are facing, including differently structured
 datasets and datasets with missing data (in the case of non-functional sensors).
 
-The dataset received from the IRT team has the layout as shown in~\tabref{tab:irt_data}. It consists of 99999 data points
-recorded at different times. The data received in this dataset is all consistent and contains readings from all the sensors.
-As this is not the case in with real data over time, simulated data has been used as stated previously. The only
-guaranteed data to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{Lon} sensor recordings.
-
+The dataset received from the IRT team has the layout as shown in~\tabref{tab:irt_data}. It consists of 99\,999 data points
+recorded at different times, and is received as raw data before being processed into a CSV format for easy manipulation
+and subsequent storage into their database.
 
 \begin{table}[h]
 \caption{The different types of data received from the Monash University Institute of Railway Technology team.}
@@ -256,18 +254,18 @@ guaranteed data to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{L
 \begin{tabular}{ | l | l | l | }
 
 \hline
-\textbf{Data name}      & \textbf{Possible values}               & \textbf{Meaning} \\ \hline
-\textbf{Time}           & Floating point value                   & Time in milliseconds since... \\ \hline
-\textbf{Speed}          & Floating point value                   & Speed in km/h (?)  \\ \hline
-\textbf{LoadEmpty}      & -1, 0                                  & Boolean flag denoting whether or not load is present in train cars.  \\ \hline
-\textbf{km}             & Floating point value                   & Amount of kilometres travelled since...  \\ \hline
+\textbf{Name}           & \textbf{Data type}                     & \textbf{Description} \\ \hline
+\textbf{Time}           & Floating point value                   & Time in seconds since the start of the test. \\ \hline
+\textbf{Speed}          & Floating point value                   & Speed in kilometres per hour. \\ \hline
+\textbf{LoadEmpty}      & -1, 0, 1                               & 1 if load is present, 0 if empty, or -1 if unknown/in-port.  \\ \hline
+\textbf{km}             & Floating point value                   & Elapsed kilometres travelled since the start of the test.\\ \hline
 \textbf{Lat}            & Floating point value from -90 to +90   & Geographic latitude coordinate at given reading.  \\ \hline
 \textbf{Lon}            & Floating point value from -180 to +180 & Geographic longitude coordinate at given reading.  \\ \hline
-\textbf{Track}          & Integer value from 1 to 213841         & Given track in which the train is located.   \\ \hline
-\textbf{SND1}           & Floating point value                   & ?  \\ \hline
-\textbf{SND2}           & Floating point value                   & ?  \\ \hline
-\textbf{SND3}           & Floating point value                   & ?  \\ \hline
-\textbf{SND4}           & Floating point value                   & ?  \\ \hline
+\textbf{Track}          & Integer value from 1 to 213\,841         & Given track in which the train is located.   \\ \hline
+\textbf{SND1}           & Floating point value                   & Spring nest deflection count in millimetres at car corner.  \\ \hline
+\textbf{SND2}           & Floating point value                   & Spring nest deflection count in millimetres at car corner.  \\ \hline
+\textbf{SND3}           & Floating point value                   & Spring nest deflection count in millimetres at car corner.  \\ \hline
+\textbf{SND4}           & Floating point value                   & Spring nest deflection count in millimetres at car corner.  \\ \hline
 \textbf{CouplerForce}   & Floating point value                   & The amount of force couple detected in the train car.  \\ \hline
 \textbf{LateralAccel}   & Floating point value                   & The amount of lateral acceleration detected in the train car.  \\ \hline
 \textbf{AccLeft}        & Floating point value                   & The amount of acceleration detected by the left sensor.  \\ \hline
@@ -280,7 +278,151 @@ guaranteed data to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{L
 \end{tabular}}
 \end{table}
 
+This dataset contains data from all the possible sensors. As previously stated, the datasets received are not always
+consistent, hence not all of these fields will always be present, or may be present and contain incorrect data readings.
+The only sensor data guaranteed to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{Lon} sensor recordings.
+
 % subsection overview_of_the_data (end)
+
+
+\subsection{Overview of data handling} % (fold)
+\label{sub:overview_of_data_handling}
+
+None of the data returned from the sensors contain overly complicated structures, and hence MongoDB's BSON data storage
+format can easily handle all of the given data types. All given types can be handled using the BSON primitive types of
+Double and 32-bit Integer for floating point and integer data, respectively.
+
+MongoDB comes with a built-in tool, called \texttt{mongoimport}, for the importing of multiple common data files, including
+CSV. Hence, the IRT data can be imported into a running MongoDB instance using the following command pattern:
+
+%TODO: \texttt{mongoimport -d DATABASE_NAME -c COLLECTION_NAME --type csv --file FILE_NAME.csv --headerline}
+
+The \texttt{-d} and \texttt{-c} flags enable the specifying of database and collection within that database in which to
+import the data into. The \texttt{--headerline} flag asks Mongo to use the CSV header to automatically generate BSON
+keys for each document. So each row in the CSV file will be converted to a MongoDB document, and stored in the specified
+database collection. By default, MongoDB tries to guess the data type for each value, with numbers represented as Doubles.
+Of course, storing every document as a flat container for different floating point values is not optimal, and pre-processing
+can be performed on Mongo to better structure the documents for later querying and processing.
+
+% subsection overview_of_data_handling (end)
+
+
+\subsection{Updating of data types} % (fold)
+\label{sub:restructuring_of_data}
+
+One of the first operations needed to be performed to restructure the data within MongoDB is to assign better data types
+fields where it is appropriate. With the given sensor data fields, the most obvious would be the \textbf{Track} and
+\textbf{LoadEmpty} fields, as the possible values they should be able to store are limited. With the \textbf{Track} field,
+the only values that should be present are integers representing the current track that the train car is located. Currently,
+the track numbers in the scope of the IRT project range from 1 to 213\,841. These all fall into the 32-bit integer representation
+that BSON supports, hence rather than the default Double type, it more be more appropriate to change it to the 32-bit Integer
+type. This can be done with the following code:
+
+%TODO: code
+
+With the \textbf{LoadEmpty} field, the only possible values are -1, 0, and 1, each representing different states. While
+this would be a perfect case to use an enumerated type, MongoDB does not natively support enums. The two main choices
+for handling enums is by using either the String or 32-bit Integer types. As the String type allows more expressive
+values and can be indexed to have integer-like performance, it would be most appropriate to change the field to be
+represented as a String type, mapping the existing numbers to appropriate strings. As the existing \textbf{LoadEmpty}
+value will need to be changed, this operation can be performed with the \texttt{db.collection.update()} function, as
+follows:
+
+%TODO: code
+
+Note that three different updates need to be performed on the collection, for each different value of \textbf{LoadEmpty},
+as filtered out by the query argument. As each update will need to query the collection to retreive a subset of documents
+to operate on, it would be wise to create a MongoDB index on the \textbf{LoadEmpty} key. This single-key index can be
+created using the following \texttt{db.collection.createIndex()} function:
+
+%TODO: code
+
+% subsection restructuring_of_data (end)
+
+
+\subsection{Restructuring of documents} % (fold)
+\label{sub:restructuring_of_documents}
+
+As the documents now contain appropriately typed key-value pairs, further modifications to the documents can be performed
+to better structure the documents. By default, the CSV importer structures the documents generated from CSV rows as flat
+documents, with all row values being represented as a discrete key-value pair. The default flat structure can be seen as
+follows:
+
+%TODO: JSON example
+
+From looking at and understanding the
+sensor data that is being dealt with, numerous sensors can be separated into distinct groups. For example, each of the
+\textbf{SND1}, \textbf{SND2}, \textbf{SND3}, and \textbf{SND4} values are from the same type of sensor located at different
+parts of the train car. Hence, rather than having four discrete key-pairs, these values can be grouped together in their
+own sub-document, or object, and pointed to by a new \textbf{SND} key. This is a more sane and appropriate way of
+structuring these values for later queries and operations.
+
+Numerous other sensor values can be grouped together in this manner for more appropriate and saner structuring using
+sub-documents within the original BSON documents. Often nested documents are used where separate tables would be used in
+a relational modelling of the dataset, which also stretches to this case, where a separate table could possible hold all
+SND sensor values.
+
+Further restructuring can be done to group the \textbf{Bounce}, \textbf{Rock}, and \textbf{Acc} values into sub-documents
+containing key-value pairs for each, finally ending up with the following document structure:
+
+%TODO: grouped JSON
+
+These restructurings could be performed with the following code, in mongo shell for example:
+
+%TODO: resturcturing code
+
+Finally, one more restructure could be performed on the existing document structure, which is grouping the \textbf{Lat}
+and \textbf{Lon} values into a single sub-document, which could be named \textbf{Loc}. This further enables future
+geospatial indexes being more easily created on the location data, for location-dependent queries and operations.
+This restructuring can be performed by the following code:
+
+%TODO: code for Loc
+
+Finally, the collection contains documents in a similar structure to:
+
+%TODO: final JSON structure
+
+% subsection restructuring_of_documents (end)
+
+\subsection{Handling missing values} % (fold)
+\label{sub:handling_missing_values}
+
+For the test datasets missing data for particular sensors, MongoDB handles these cases. The datasets include
+CSV files with different value layouts, and often missing values in random rows, apart from the time and location fields
+as they are guaranteed.
+
+For test datasets that are organised in different orders of fields, as Mongo's inner data storage format, BSON, does
+not have any ordering of its keys, documents are still generated with the appropriate data. For datasets with missing
+values in certain rows, the BSON document that is generated simply does not contain a key-value pair for the missed
+attribute. This is opposed to setting the key to a null value, or default value. Of course, a user may generate keys
+for the missing values and point them to null or default values, however there is no advantage to the extra processing.
+
+When operations are performed on multiple documents in Mongo, if the documents contain a different amount of keys, Mongo
+effectively ignores this and continues to perform the operation on all documents. Generally, specific keys and values
+are passed to operations such as these, hence if the key used does not exist within certain documents, those documents
+simply get ignored from the operation. For example, if a collection contains 100 documents, where only four of those
+documents contain the \textbf{isAdmin} key and an operation is called that depends on the key \textbf{isAdmin}, only
+those four documents within the collection will be operated on. This allows completely differently structured documents
+to be contained within the same collection (however, in a well-structured dataset, multiple collections would be used).
+
+Hence, in the IRT case study, if certain sensors break down during operation and are unable to send back data, MongoDB
+will still allow queries and operations to be performed on the overall sensor data. However, if any operations depend on
+a particular sensor's data, such as the operations performed in the pre-processing of the data
+in~\sectref{sub:restructuring_of_data}, the documents missing those sensor's data will simply be left out of the operation. This
+avoids errors that are currently encountered with the currently set default values for broken sensors. For instance, if
+a sensor is broken and needs to be used in an operation, a lot less documents will be needed to be involved in the
+query, increasing query performance. Furthermore, any reducing operations performed on the datasets, will not be subject
+to involving unneeded default values in their calculations.
+
+% subsection handling_missing_values (end)
+
+
+\subsection{Filtering bad data} % (fold)
+\label{sub:filtering_bad_data}
+
+% subsection filtering_bad_data (end)
+
+
 
 % section implementation (end)
 
