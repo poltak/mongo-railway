@@ -37,8 +37,11 @@ function totalDistanceMR() {
 /*
 Iteratively restructure default documents into related fields
  */
-function latLon() {
+function preProcessing() {
   var updateDocsFunc = function(doc) {
+    // Change LoadEmpty attribute to boolean type
+    doc.LoadEmpty = doc.LoadEmpty === -1 ? false : true;
+
     // Add location nested doc
     doc.Loc = {
       Lat: doc.Lat,
@@ -101,4 +104,34 @@ function latLon() {
   db.train.find({'km': {'$lt': 0}});
 }
 
+function fixBools() {
+  // Change LoadEmpty = -1 to true
+  db.train.update(
+    // query
+    { "LoadEmpty" : 0 },
 
+    // update
+    { $set: {LoadEmpty: true} },
+
+    // options
+    {
+      "multi" : true,  // update only one document
+      "upsert" : false  // insert a new document, if no existing document match the query
+    }
+  );
+
+  // Change LoadEmpty = -1 to false
+  db.train.update(
+    // query
+    { "LoadEmpty" : -1 },
+
+    // update
+    { $set: {LoadEmpty: false} },
+
+    // options
+    {
+      "multi" : true,  // update only one document
+      "upsert" : false  // insert a new document, if no existing document match the query
+    }
+  );
+}
