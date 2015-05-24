@@ -6,7 +6,42 @@
 \usepackage{graphicx}               % For the displaying of images in floats
 \usepackage{mathtools}              % For more advanced math usage
 \usepackage{poltakmacros}           % Personal macro package (https://gist.github.com/poltak/6ed59e8f30c9c399143f)
+\usepackage{listings}
+\usepackage{color}
+\definecolor{lightgray}{rgb}{.9,.9,.9}
+\definecolor{darkgray}{rgb}{.4,.4,.4}
+\definecolor{purple}{rgb}{0.65, 0.12, 0.82}
 
+\lstdefinelanguage{JavaScript}{
+  keywords={typeof, new, true, false, catch, function, delete, return, null, catch, switch, var, if, in, while, do, else, case, break},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={class, export, boolean, throw, implements, import, this},
+  ndkeywordstyle=\color{darkgray}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{purple}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
+\lstset{
+   language=JavaScript,
+   backgroundcolor=\color{lightgray},
+   extendedchars=true,
+   basicstyle=\footnotesize\ttfamily,
+   showstringspaces=false,
+   showspaces=false,
+   numbers=left,
+   numberstyle=\footnotesize,
+   numbersep=9pt,
+   tabsize=2,
+   breaklines=true,
+   showtabs=false,
+   captionpos=b
+}
 
 
 \begin{document}
@@ -60,7 +95,7 @@ In this paper, we will look at the use of MongoDB~\footnote{https://www.mongodb.
 as a solution for a case study based upon a railway data problem using data from Monash University's Institute of Railway
 Technology (IRT). An overview of the case study in question will be given in~\sectref{sec:case_study_overview}. A small
 overview of the MongoDB database will be given in~\sectref{sec:mongo_overview}. Implementation and
-evaluation details will be given in~\sectref{sec:implementation} and~\sectref{sec:evaluation_and_discussion}, respectively,
+discussion details will be given in~\sectref{sec:implementation} and~\sectref{sec:discussion}, respectively,
 before concluding in~\sectref{sec:conclusion}.
 
 % section introduction (end)
@@ -295,7 +330,9 @@ Double and 32-bit Integer for floating point and integer data, respectively.
 MongoDB comes with a built-in tool, called \texttt{mongoimport}, for the importing of multiple common data files, including
 CSV. Hence, the IRT data can be imported into a running MongoDB instance using the following command pattern:
 
-%TODO: \texttt{mongoimport -d DATABASE_NAME -c COLLECTION_NAME --type csv --file FILE_NAME.csv --headerline}
+\begin{lstlisting}[language=bash]
+mongoimport -d DATABASE_NAME -c COLLECTION_NAME --type csv --file FILE_NAME.csv --headerline --ignoreBlanks
+\end{lstlisting}
 
 The \texttt{-d} and \texttt{-c} flags enable the specifying of database and collection within that database in which to
 import the data into. The \texttt{--headerline} flag asks Mongo to use the CSV header to automatically generate BSON
@@ -316,26 +353,89 @@ fields where it is appropriate. With the given sensor data fields, the most obvi
 the only values that should be present are integers representing the current track that the train car is located. Currently,
 the track numbers in the scope of the IRT project range from 1 to 213\,841. These all fall into the 32-bit integer representation
 that BSON supports, hence rather than the default Double type, it more be more appropriate to change it to the 32-bit Integer
-type. This can be done with the following code:
+type. This can be done iteratively with the following code:
 
-%TODO: code
+\begin{lstlisting}
+var query = {Track: {$exists: true}};
+
+db.train.find(query).forEach(function(doc) {
+
+  // Cast Track to be Int32 type
+  doc.Track = new NumberInt(doc.Track);
+
+  // Write changes to MongoDB
+  db.train.save(doc);
+
+});
+\end{lstlisting}
 
 With the \textbf{LoadEmpty} field, the only possible values are -1, 0, and 1, each representing different states. While
 this would be a perfect case to use an enumerated type, MongoDB does not natively support enums. The two main choices
 for handling enums is by using either the String or 32-bit Integer types. As the String type allows more expressive
-values and can be indexed to have integer-like performance, it would be most appropriate to change the field to be
+values, and can be indexed to have integer-like performance, it would be most appropriate to change the field to be
 represented as a String type, mapping the existing numbers to appropriate strings. As the existing \textbf{LoadEmpty}
 value will need to be changed, this operation can be performed with the \texttt{db.collection.update()} function, as
 follows:
 
-%TODO: code
+\begin{lstlisting}
+// Change LoadEmpty = 1 to 'loaded'
+db.train.update(
+
+  // query
+  { "LoadEmpty" : 1 },
+
+  // update
+  { $set: {LoadEmpty: 'loaded'} },
+
+  // options
+  {
+    "multi" : true,   // Update all documents
+    "upsert" : false  // Insert a new document, if no existing document match the query
+  }
+);
+
+// Change LoadEmpty = 0 to 'empty'
+db.train.update(
+
+  // query
+  { "LoadEmpty" : 0 },
+
+  // update
+  { $set: {LoadEmpty: 'empty'} },
+
+  // options
+  {
+    "multi" : true,   // Update all documents
+    "upsert" : false  // Insert a new document, if no existing document match the query
+  }
+);
+
+// Change LoadEmpty = -1 to 'unknown'
+db.train.update(
+
+  // query
+  { "LoadEmpty" : -1 },
+
+  // update
+  { $set: {LoadEmpty: 'unknown'} },
+
+  // options
+  {
+    "multi" : true,   // Update all documents
+    "upsert" : false  // Insert a new document, if no existing document match the query
+  }
+);
+\end{lstlisting}
 
 Note that three different updates need to be performed on the collection, for each different value of \textbf{LoadEmpty},
-as filtered out by the query argument. As each update will need to query the collection to retreive a subset of documents
+as filtered out by the query argument. As each update will need to query the collection to retrieve a subset of documents
 to operate on, it would be wise to create a MongoDB index on the \textbf{LoadEmpty} key. This single-key index can be
 created using the following \texttt{db.collection.createIndex()} function:
 
-%TODO: code
+\begin{lstlisting}
+// Create an ascending index on LoadEmpty field
+db.train.createIndex({LoadEmpty: 1});
+\end{lstlisting}
 
 % subsection restructuring_of_data (end)
 
@@ -348,7 +448,30 @@ to better structure the documents. By default, the CSV importer structures the d
 documents, with all row values being represented as a discrete key-value pair. The default flat structure can be seen as
 follows:
 
-%TODO: JSON example
+\begin{lstlisting}
+{
+  "_id" : ObjectId("5561e94530f853aef8bbfd0c"),
+  "Time" : 1094468487.0999999046325684,
+  "Speed" : 4.4783997535999998,
+  "LoadEmpty" : -1.0000000000000000,
+  "km" : 5.0096998214999999,
+  "Lat" : -20.6665750019999983,
+  "Lon" : 117.1280816499999986,
+  "Track" : 2.0000000000000000,
+  "SND1" : 0.0118295024810000,
+  "SND2" : -0.0173957574360000,
+  "SND3" : -0.0295975576070000,
+  "SND4" : -0.0327308348410000,
+  "CouplerForce" : 23.1114991600000010,
+  "LateralAccel" : 0.0033679292537000,
+  "AccLeft" : 0.0000000000000000,
+  "AccRight" : 0.0000000000000000,
+  "BounceFront" : -0.0104506661800000,
+  "BounceRear" : -0.0234966575210000,
+  "RockFront" : 0.0445603373210000,
+  "RockRear" : 0.0122018001710000
+}
+\end{lstlisting}
 
 From looking at and understanding the
 sensor data that is being dealt with, numerous sensors can be separated into distinct groups. For example, each of the
@@ -365,22 +488,108 @@ SND sensor values.
 Further restructuring can be done to group the \textbf{Bounce}, \textbf{Rock}, and \textbf{Acc} values into sub-documents
 containing key-value pairs for each, finally ending up with the following document structure:
 
-%TODO: grouped JSON
+\begin{lstlisting}
+{
+  "_id" : ObjectId("555d30ca33d9d7607772920f"),
+  "Time" : 1094468487.0999999046325684,
+  "Speed" : 4.4783997535999998,
+  "LoadEmpty" : "unknown",
+  "km" : 5.0096998214999999,
+  "Track" : 2,
+  "CouplerForce" : 23.1114991600000010,
+  "LateralAccel" : 0.0033679292537000,
+  "SND" : {
+    "SND1" : 0.0118295024810000,
+    "SND2" : -0.0173957574360000,
+    "SND3" : -0.0295975576070000,
+    "SND4" : -0.0327308348410000
+  },
+  "Loc" : {
+    "Lat" : -20.6665750019999983,
+    "Lon" : 117.1280816499999986
+  },
+  "Bounce" : {
+    "Front" : -0.0104506661800000,
+    "Rear" : -0.0234966575210000
+  },
+  "Rock" : {
+    "Front" : 0.0445603373210000,
+    "Rear" : 0.0122018001710000
+  },
+  "Acc" : {
+    "Left" : 0.0000000000000000,
+    "Right" : 0.0000000000000000
+  }
+}
+\end{lstlisting}
 
 These restructurings could be performed with the following code, in mongo shell for example:
 
-%TODO: resturcturing code
+\begin{lstlisting}
+var updateDocsFunc = function(doc) {
+  // Add location nested doc
+  doc.Loc = {
+    Lat: doc.Lat,
+    Lon: doc.Lon
+  };
+
+  // Add Bounce nested doc
+  doc.Bounce = {
+    Front: doc.BounceFront,
+    Rear: doc.BounceRear
+  };
+
+  // Add Rock nested doc
+  doc.Rock = {
+    Front: doc.RockFront,
+    Rear: doc.RockRear
+  };
+
+  // Add SND nested doc
+  doc.SND = {
+    SND1: doc.SND1,
+    SND2: doc.SND2,
+    SND3: doc.SND3,
+    SND4: doc.SND4
+  };
+
+  // Add Acc nested doc
+  doc.Acc = {
+    Left: doc.AccLeft,
+    Right: doc.AccRight
+  };
+
+  // Delete old values
+  delete doc.Lat;
+  delete doc.Lon;
+  delete doc.BounceFront;
+  delete doc.BounceRear;
+  delete doc.RockFront;
+  delete doc.RockRear;
+  delete doc.SND1;
+  delete doc.SND2;
+  delete doc.SND3;
+  delete doc.SND4;
+  delete doc.AccLeft;
+  delete doc.AccRight;
+
+  // Write changes
+  db.train.save(doc);
+};
+
+// Iteratively perform operations on all records
+db.train.find().snapshot().forEach(updateDocsFunc);
+\end{lstlisting}
 
 Finally, one more restructure could be performed on the existing document structure, which is grouping the \textbf{Lat}
 and \textbf{Lon} values into a single sub-document, which could be named \textbf{Loc}. This further enables future
 geospatial indexes being more easily created on the location data, for location-dependent queries and operations.
 This restructuring can be performed by the following code:
 
-%TODO: code for Loc
-
-Finally, the collection contains documents in a similar structure to:
-
-%TODO: final JSON structure
+\begin{lstlisting}
+// Create a geospatial index on Loc nested document
+db.train.createIndex({Loc: '2d'});
+\end{lstlisting}
 
 % subsection restructuring_of_documents (end)
 
@@ -429,8 +638,8 @@ to involving unneeded default values in their calculations.
 
 \newpage
 
-\section{Evaluation and Discussion} % (fold)
-\label{sec:evaluation_and_discussion}
+\section{Discussion} % (fold)
+\label{sec:discussion}
 
 % section evaluation_and_discussion (end)
 
