@@ -6,6 +6,8 @@
 \usepackage{graphicx}               % For the displaying of images in floats
 \usepackage{mathtools}              % For more advanced math usage
 \usepackage{poltakmacros}           % Personal macro package (https://gist.github.com/poltak/6ed59e8f30c9c399143f)
+\usepackage[T1]{fontenc}
+\usepackage[scaled=.8]{sourcecodepro}
 \usepackage{listings}
 \usepackage{color}
 \definecolor{lightgray}{rgb}{.9,.9,.9}
@@ -57,16 +59,16 @@
 \section{Introduction} % (fold)
 \label{sec:introduction}
 
-While relational database management systems (RDBMS) have been somewhat of a ``go-to'' solution for for a number of years
+While relational database management systems (RDBMS) have been somewhat of a ``go-to'' solution for a number of years
 for general data storage and management problems that many application developers face, we have noted a recent rise
 in the use of non-relational data management tools~\cite{padhy2011rdbms}. Most of these tools have traditionally fallen into the domain of
-big data analytics, with platforms such as the Hadoop ecosystem~\footnote{https://hadoop.apache.org/} being notably popular.
+big data analytics, with platforms such as the Hadoop ecosystem\footnote{https://hadoop.apache.org/} being notably popular.
 However, outside of the domain of big data, looking more at general purpose data storage and management, what are now
 commonly referred to as ``NoSQL'' solutions are proving to be a popular solution.
 
 NoSQL databases refer to those databases that are not built on top of the relational algebraic concepts, as laid out by
 Codd in 1970~\cite{codd1970relational}, unlike the more commonly used RDBMS technologies, such as
-MySQL~\footnote{https://www.mysql.com/}. Being free of the strictness the relational model enforces on its data allows
+MySQL\footnote{https://www.mysql.com/}. Being free of the strictness that the relational model enforces on its data allows
 NoSQL databases to focus less on the overall structure of data, and more on factors such as scalability and
 performance~\cite{leavitt2010will}.
 
@@ -89,11 +91,11 @@ for NoSQL databases in comparison to relational databases~\cite{indrawan2012data
 Of course, these differences between the NoSQL model and relational model vary between each individual database
 technology's design, and trade-offs are often made depending on the goals and aims for that given database.
 
-In this paper, we will look at the use of MongoDB~\footnote{https://www.mongodb.org/}, a popular NoSQL database solution,
+In this paper, we will look at the use of MongoDB\footnote{https://www.mongodb.org/}, a popular NoSQL database,
 as a solution for a case study based upon a railway data problem using data from Monash University's Institute of Railway
 Technology (IRT). An overview of the case study in question will be given in~\sectref{sec:case_study_overview}. A small
-overview of the MongoDB database will be given in~\sectref{sec:mongo_overview}. Implementation and
-discussion details will be given in~\sectref{sec:implementation} and~\sectref{sec:discussion}, respectively,
+overview of the MongoDB database will be given in~\sectref{sec:mongo_overview}. Implementation details and
+discussion will be given in~\sectref{sec:implementation} and~\sectref{sec:discussion}, respectively,
 before concluding in~\sectref{sec:conclusion}.
 
 % section introduction (end)
@@ -104,23 +106,23 @@ before concluding in~\sectref{sec:conclusion}.
 \label{sec:case_study_overview}
 
 The case study that is being looked at involves a project that has been worked at at the Monash University Institute of
-Railway technology (IRT). The project involves trains the operate in the Pilbara region of Western Australia, taking
+Railway Technology (IRT). The project involves trains the operate in the Pilbara region of Western Australia, taking
 ore and minerals from loading points at mines to a specified unloading port. The data that is being dealt with comes from
-numerous categories of sensors being placed on certain specialised train cars to record data monitoring track and train
-car conditions~\cite{darby2003development,darby2005track}.
+numerous categories of sensors being placed on certain specialised train cars to record the data for monitoring the conditions
+for track and train cars~\cite{darby2003development,darby2005track}.
 
-Data currently gets unloaded at sent back in large batches to remote servers once the car completes a trip and pulls back
-into port~\cite{thomas2012taking}. The project currently makes use of a RDBMS solution to manage data storage, however
+Data currently gets unloaded and sent back in large batches to remote servers once the car completes a trip and pulls back
+into port~\cite{thomas2012taking}. The project currently makes use of an RDBMS solution to manage data storage, however
 this solution is faced with many problems that currently require painful work-arounds. The most obvious of which involves
 unreliable data being received from sensors. For example, in the case of a damaged or failed sensor, reliable data cannot
 be guaranteed to be returned from such a sensor. Hence, data received by the remote server is often inconsistently
-structured, and thus the data has to go through a series of preprocessing work arounds to fit in within the strict
-schema that the RDBMS expects. As the only guaranteed consistency in the data that gets received is the timestamp and
-geocoordinates, the strictly structured relational model is not an appropriate solution.
+structured, and thus the data has to go through a series of preprocessing work-arounds to fit in within the strict
+schema that the RDBMS expects. As the only guaranteed consistency in the received data is the timestamp and
+geocoordinates, the strictly structured relational model is currently deemed to not be an appropriate solution.
 
 The Monash IRT team are currently investigating further solutions in the NoSQL big data space, where they intend to
 replace the current system with an appropriately tested solution. While the scope of that project is much larger than
-what will be covered in this paper, we will look at the differences in what is possible when attempting to use a NoSQL
+what will be covered in this report, we will look at the differences in what is possible when attempting to use a NoSQL
 database for the data storage and management.
 
 For this paper, we will be looking at the possibility of using MongoDB, a popular NoSQL database that does away with
@@ -142,13 +144,13 @@ manual.}~\cite{Mongo_man}
 
 MongoDB can be described as a documented-oriented NoSQL database, which does not rely on schemas or tables to structure
 its data~\cite{parker2013comparing}. Data within Mongo is stored using JSON-like structured documents, called
-BSON~\cite{bsons6:online}, which allows for strongly typed data fields and binary data. BSON documents are then stored
+BSON~\cite{bsons6:online}, which allow for strongly typed data fields and binary data. BSON documents are then stored
 within ``collections'' which reside in a given ``database''~\cite{parker2013comparing}. To relate back to the relational
 model, these concepts within Mongo can be compared as shown in~\tabref{tab:mongo_to_relational}.
 
 \begin{table}[h]
 \centering
-\caption{MongoDB conceptual structures as they relate to the relational model concepts.}
+\caption{MongoDB concepts as they relate to RDBMS concepts.}
 \label{tab:mongo_to_relational}
 \begin{tabular}{ | l | l | }
 
@@ -167,10 +169,11 @@ While these concepts within Mongo can be related back to concepts within the rel
 they are not exactly the same. For example, a table in the relational model is structured in such a way that all records
 within that table must adhere to. Conversely, in a Mongo collection, several differently structured BSON documents may
 coexist freely. BSON documents generally follow some sort of predefined structure for that collection, to maintain
-data structure sanity, for the user's sake, however none of this is enforced.
+data structure sanity for the user's sake, however none of this is enforced.
 
-This sort of freedom in terms of structure allows for similarly structured documents in database collections, where
-differences may only be found in that certain documents may miss keys that are present in other documents. This is
+In practise, this freedom in terms of structure allows for similarly structured documents in database collections, where
+differences may only be found in that certain documents may be missing keys that are present in other documents, or inversely,
+documents may exist with extra keys not found elsewhere. This is
 highly rational in the way that, depending on the use-case, data may not be present for certain fields all the time.
 Thus instead of placing null or default values for missing data, Mongo allows the user to just leave them out of the
 relevant document. Note that document structure in Mongo is also dynamic in the way that it can be changed at any time;
@@ -178,27 +181,28 @@ BSON keys and values may be added or removed from existing documents at any time
 
 % subsection data_storage (end)
 
+
 \subsection{Data interaction} % (fold)
 \label{sub:data_interaction}
 
-MongoDB allows a lot of the similar type functionality in queries and data manipulation that is also expected in
-relational databases. Generally interactions with data are performed through JavaScript functions on collections, or cursors
+MongoDB allows a lot of the similar type functionality, in terms of queries and data manipulation, that is also expected in
+relational databases. Generally, interactions with data are performed through JavaScript functions on collections, or cursors
 (subsets of documents within a collection), allowing general querying operations through use of the \texttt{find()} function,
 and standard CRUD operations through the \texttt{create()}, \texttt{update()}, and \texttt{remove()} functions.
 
 MongoDB officially provides support for many drivers allowing interaction with Mongo databases in different programming
 languages, including JavaScript, Python, and Java. As well as providing drivers, MongoDB also provides a default shell,
-called the \textit{mongo shell}, which allows general JavaScript code to be written to interact with the standard MongoDB
+called the \textit{mongo shell}, which allows general JavaScript code to be written and interpreted to interact with the standard MongoDB
 API and perform ad-hoc queries. No official graphical user interface exists to interact with MongoDB, however there
 are numerous third party clients, which essentially wrap around mongo shell.
 
 MongoDB also supports more advanced data manipulation operations through use of aggregation functions. Generally, aggregation
 functions are user defined operations to perform on documents in collections to return results. These include general
-aggregate operation models, such as MapReduce, and often involve grouping documents by given keys and various queries
+aggregate operation models, such as map reduce, and often involve grouping documents by given keys and various queries
 to limit the amount of documents to process.
 
-
 % subsection data_interaction (end)
+
 
 \subsection{Further database features} % (fold)
 \label{sub:further_database_features}
@@ -209,14 +213,18 @@ to limit the amount of documents to process.
 MongoDB, like many other NoSQL databases, does not support the joins of multiple tables or, in MongoDB's case, documents,
 as is common in relational databases.
 Instead, MongoDB allows two main ways of relating different documents to each other. These are via referencing and
-nested documents. Nested documents are the main recommended way of join multiple documents, unless the documents have
-many-to-many relationships. To allow nested documents, a BSON value can store a whole other document, or arrays of documents.
-Example use-cases of where nested documents are appropriate include documents that have natural ``child'' documents that
-only it will ever need to reference. For example, a blog post document may have many nested comment documents as the
-comments are specific to a given blog post. For documents where many things may refer to it, it is recommended to use
+nested documents. Nested documents are the recommended way of ``joining'' multiple documents, unless the documents have
+many-to-many relationships. To allow nested documents, a BSON value can store a whole document, or arrays of documents.
+Example use-cases of where nested documents are appropriate include documents that have natural child documents that
+only the parent will ever need to reference. For example, a blog post document may have many nested comment documents as the
+comments are specific to a given blog post. For documents where many other documents may refer to it, it is recommended to use
 references via BSON values containing other document IDs.
 
+For performance purposes, nested documents can be accessed in a single query, while referenced documents require multiple
+queries depending on the amount of document references needed to be traversed.
+
 % subsubsection joins (end)
+
 
 \subsubsection{Indexing} % (fold)
 \label{ssub:indexing}
@@ -224,31 +232,33 @@ references via BSON values containing other document IDs.
 Indexing in MongoDB is supported in a similar ways that are present in relational databases. Mongo builds a B-Tree data
 structure on a particular collection's key, allowing all documents within that collection with that key to be accessed
 in $O(log(n))$ time, as opposed to $O(n)$ time if unindexed. MongoDB also supports numerous types of indexes, such as
-single-key, multi-key, geospatial, and hashed indexes.
+single-key, multi-key, geospatial, and hashed indexes. Examples of creating indexes will be given in~\sectref{sec:implementation}.
 
 % subsubsection indexing (end)
+
 
 \subsubsection{Replication} % (fold)
 \label{ssub:replication}
 
 MongoDB allows replication and management of multiple copies of the same data for the purpose of increasing data
 redundancy and availability. Replication in Mongo is managed using a primary instance of data, with secondaries replicating
-the data in the primary using operation logs (\textit{oplogs}) to mimic any operations on data that were performed in the
-primary. Replicas have fault tolerance in the way that if the primary fails, an election is started to promote any of the
+the data in the primary using operation logs (\textit{oplogs}) to mimic any operations on performed by the primary.
+Replicas have fault tolerance in the way that if the primary fails, an election is started to promote any of the
 secondaries to become a primary. In general, a client will only interact with a primary, however operations can also be
-specified to be performed on specific secondaries. However, as replication data is asynchronously managed, any reads
-performed specifically on secondaries may not give up-to-date data.
+specified to be performed on specific secondaries. However, as replication data between the primary and secondaries is asynchronously managed, any reads
+performed specifically on secondaries may not return up-to-date data.
 
 % subsubsection replication (end)
+
 
 \subsubsection{Sharding} % (fold)
 \label{ssub:sharding}
 
-Sharding in MongoDB allows for horizontal scaling of a Mongo database, where a given database or collection is shared
-among different ``shards'', or multiple MongoDB instances, generally running on separate machines. Sharding is performed
+Sharding in MongoDB allows for the horizontal scaling of a Mongo database. Sharding is where a given database, or collection, is shared
+among different ``shards'', or MongoDB instances, generally running on separate machines. Sharding is performed
 on an indexed document key, dividing documents containing that key based on either range or computed hashes. Ranged-based
-sharding is generally recommended where data is generally expected to be accessed in some sort of sequence, while hash-based
-sharding offers a guaranteed random distribution of data across shards, and more balanced equally-sized shards.
+sharding is recommended where data is generally expected to be accessed in some sort of sequence, while hash-based
+sharding offers a guaranteed random distribution of data across shards, thus giving more balanced, equally-sized shards.
 
 % subsubsection sharding (end)
 
@@ -264,14 +274,13 @@ sharding offers a guaranteed random distribution of data across shards, and more
 \label{sec:implementation}
 
 Implementation of the database for the given Monash IRT data was all performed using MongoDB version 3.0.3, the latest
-version as of 2015-05-18. Interaction with the MongoDB database was all performed using the mongo shell and corresponding
-official NodeJS MongoDB driver.
+version as of 2015-05-18. Interaction with the MongoDB database was all performed using JavaScript code via the mongo shell.
 
 \subsection{Overview of the data} % (fold)
 \label{sub:overview_of_the_data}
 
 The test data used for this case study was acquired from the Monash IRT team, and was an extract of real data they have
-received from the railway sensors. As only one set of data was given, simulated datasets based upon the extract have
+received from the railway sensors. As only one set of data was provided, simulated datasets based upon the extract have
 also been created to simulate the type of inconsistencies the IRT team are facing, including differently structured
 datasets and datasets with missing data (in the case of non-functional sensors).
 
@@ -280,7 +289,7 @@ recorded at different times, and is received as raw data before being processed 
 and subsequent storage into their database.
 
 \begin{table}[h]
-\caption{The different types of data received from the Monash University Institute of Railway Technology team.}
+\caption{The different types of sensor data received from the Monash University Institute of Railway Technology team.}
 \label{tab:irt_data}
 \tabcolsep=0.11cm
 \scalebox{0.7}{
@@ -311,7 +320,7 @@ and subsequent storage into their database.
 \end{tabular}}
 \end{table}
 
-This dataset contains data from all the possible sensors. As previously stated, the datasets received are not always
+This dataset contains data from all the currently installed sensors. As previously stated, the datasets received are not always
 consistent, hence not all of these fields will always be present, or may be present and contain incorrect data readings.
 The only sensor data guaranteed to be received is the \textbf{Time}, \textbf{Lat}, and \textbf{Lon} sensor recordings.
 
@@ -323,7 +332,7 @@ The only sensor data guaranteed to be received is the \textbf{Time}, \textbf{Lat
 
 None of the data returned from the sensors contain overly complicated structures, and hence MongoDB's BSON data storage
 format can easily handle all of the given data types. All given types can be handled using the BSON primitive types of
-Double and 32-bit Integer for floating point and integer data, respectively.
+Double and 32-bit Integer for floating point and integer values, respectively.
 
 MongoDB comes with a built-in tool, called \texttt{mongoimport}, for the importing of multiple common data files, including
 CSV. Hence, the IRT data can be imported into a running MongoDB instance using the following command pattern:
@@ -332,12 +341,11 @@ CSV. Hence, the IRT data can be imported into a running MongoDB instance using t
 mongoimport -d DATABASE_NAME -c COLLECTION_NAME --type csv --file FILE_NAME.csv --headerline --ignoreBlanks
 \end{lstlisting}
 
-The \texttt{-d} and \texttt{-c} flags enable the specifying of database and collection within that database in which to
+The \texttt{-d} and \texttt{-c} flags enable the specifying of database and collection in which to
 import the data into. The \texttt{--headerline} flag asks Mongo to use the CSV header to automatically generate BSON
 keys for each document. The \texttt{--ignoreBlanks} flag asks Mongo not to set empty CSV values to the empty string. Instead,
 these key-value pairs are left out of their respective documents.
-So each row in the CSV file will be converted to a MongoDB document, and stored in the specified
-database collection. By default, MongoDB tries to guess the data type for each value, with numbers represented as Doubles.
+By default, MongoDB tries to guess the data type for each value, with numbers represented as Doubles.
 Of course, storing every document as a flat container for different floating point values is not optimal, and pre-processing
 can be performed on Mongo to better structure the documents for later querying and processing.
 
@@ -441,7 +449,7 @@ db.train.createIndex({LoadEmpty: 1});
 \subsection{Restructuring of documents} % (fold)
 \label{sub:restructuring_of_documents}
 
-As the documents now contain appropriately typed key-value pairs, further modifications to the documents can be performed
+As the documents now contain appropriately typed values, further modifications to the documents can be performed
 to better structure the documents. By default, the CSV importer structures the documents generated from CSV rows as flat
 documents, with all row values being represented as a discrete key-value pair. The default flat structure can be seen as
 follows:
@@ -483,7 +491,7 @@ sub-documents within the original BSON documents. Often nested documents are use
 a relational modelling of the dataset, which also stretches to this case, where a separate table could possible hold all
 SND sensor values.
 
-Further restructuring can be done to group the \textbf{Bounce}, \textbf{Rock}, and \textbf{Acc} values into sub-documents
+Further restructuring can be done to group the \textbf{Bounce}, \textbf{Rock}, \textbf{Lat}, \textbf{Lon}, and \textbf{Acc} values into sub-documents
 containing key-value pairs for each, finally ending up with the following document structure:
 
 \begin{lstlisting}[caption=Improved multi-layered document structure.]
@@ -521,9 +529,9 @@ containing key-value pairs for each, finally ending up with the following docume
 }
 \end{lstlisting}
 
-These restructurings could be performed with the following code, in mongo shell for example:
+These restructurings could be performed iteratively using the following code, in mongo shell for example:
 
-\begin{lstlisting}[caption=Restructuring of documents in ``train'' collection using iterative operation.]
+\begin{lstlisting}[caption=Restructuring of documents in ``train'' collection using an iteratively applied operation.]
 var updateDocsFunc = function(doc) {
   // Add location nested doc
   doc.Loc = {
@@ -579,9 +587,10 @@ var updateDocsFunc = function(doc) {
 db.train.find().snapshot().forEach(updateDocsFunc);
 \end{lstlisting}
 
-Finally, one more restructure could be performed on the existing document structure, which is grouping the \textbf{Lat}
-and \textbf{Lon} values into a single sub-document, which could be named \textbf{Loc}. This further enables future
-geospatial indexes being more easily created on the location data, for location-dependent queries and operations.
+Finally, as we have now grouped the \textbf{Lat}
+and \textbf{Lon} values into the single sub-document, \textbf{Loc}, this enables us to create a geospatial index on this
+sub-document.
+This geospatial index will allow for faster location-dependent queries and operations.
 This restructuring can be performed by the following code:
 
 \begin{lstlisting}
@@ -594,14 +603,14 @@ db.train.createIndex({Loc: '2d'});
 \subsection{Handling missing values} % (fold)
 \label{sub:handling_missing_values}
 
-For the test datasets missing data for particular sensors, MongoDB handles these cases. The datasets include
+For the test datasets missing data for particular sensors, MongoDB natively handles these cases. The possible datasets include
 CSV files with different value layouts, and often missing values in random rows, apart from the time and location fields
-as they are guaranteed.
+which are guaranteed.
 
 For test datasets that are organised in different orders of fields, as Mongo's inner data storage format, BSON, does
 not have any ordering of its keys, documents are still generated with the appropriate data. For datasets with missing
-values in certain rows, the BSON document that is generated simply does not contain a key-value pair for the missed
-attribute. This is opposed to setting the key to a null value, or default value. Of course, a user may generate keys
+values in certain rows, the BSON document that is generated simply does not contain a key-value pair for the missing
+attribute. This is opposed to setting the key to a null or default value. Of course, a user is free to generate keys
 for the missing values and point them to null or default values, however there is no advantage to the extra processing.
 
 When operations are performed on multiple documents in Mongo, if the documents contain a different amount of keys, Mongo
@@ -812,7 +821,7 @@ to be taken into consideration when implementing the dataset on a non-relational
 handles special cases that have been proving to be a problem on their current relational model.
 
 Overall, the implementation of their dataset on a non-relational database has been positive, without any major issues that
-would impact the database design in a negative way. The one aspect that would need to be looked at further, would be a
+would impact the database design in any negative way. The one aspect that would need to be looked at further, would be a
 quantitative evaluation of given queries that are commonly performed on their current relational database, compared with
 the equivalent queries in MongoDB. We have shown that it is very possible and beneficial to use MongoDB with the IRT
 project data, however performance is an important aspect and should be looked into further to allow an informed decision
