@@ -13,7 +13,7 @@
 \definecolor{purple}{rgb}{0.65, 0.12, 0.82}
 
 \lstdefinelanguage{JavaScript}{
-  keywords={typeof, new, true, false, catch, function, delete, return, null, catch, switch, var, if, in, while, do, else, case, break},
+  keywords={typeof, new, true, false, catch, function, delete, return, undefined, null, catch, switch, var, if, in, while, do, else, case, break},
   keywordstyle=\color{blue}\bfseries,
   ndkeywords={class, export, boolean, throw, implements, import, this},
   ndkeywordstyle=\color{darkgray}\bfseries,
@@ -28,19 +28,17 @@
 }
 
 \lstset{
-   language=JavaScript,
-   backgroundcolor=\color{lightgray},
-   extendedchars=true,
-   basicstyle=\footnotesize\ttfamily,
-   showstringspaces=false,
-   showspaces=false,
-   numbers=left,
-   numberstyle=\footnotesize,
-   numbersep=9pt,
-   tabsize=2,
-   breaklines=true,
-   showtabs=false,
-   captionpos=b
+  language=JavaScript,
+  backgroundcolor=\color{lightgray},
+  extendedchars=true,
+  basicstyle=\footnotesize\ttfamily,
+  showstringspaces=false,
+  showspaces=false,
+  numbers=none,
+  tabsize=2,
+  breaklines=true,
+  showtabs=false,
+  captionpos=b
 }
 
 
@@ -336,7 +334,9 @@ mongoimport -d DATABASE_NAME -c COLLECTION_NAME --type csv --file FILE_NAME.csv 
 
 The \texttt{-d} and \texttt{-c} flags enable the specifying of database and collection within that database in which to
 import the data into. The \texttt{--headerline} flag asks Mongo to use the CSV header to automatically generate BSON
-keys for each document. So each row in the CSV file will be converted to a MongoDB document, and stored in the specified
+keys for each document. The \texttt{--ignoreBlanks} flag asks Mongo not to set empty CSV values to the empty string. Instead,
+these key-value pairs are left out of their respective documents.
+So each row in the CSV file will be converted to a MongoDB document, and stored in the specified
 database collection. By default, MongoDB tries to guess the data type for each value, with numbers represented as Doubles.
 Of course, storing every document as a flat container for different floating point values is not optimal, and pre-processing
 can be performed on Mongo to better structure the documents for later querying and processing.
@@ -355,17 +355,15 @@ the track numbers in the scope of the IRT project range from 1 to 213\,841. Thes
 that BSON supports, hence rather than the default Double type, it more be more appropriate to change it to the 32-bit Integer
 type. This can be done iteratively with the following code:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Performing an iterative operation on database collection ``train''.]
 var query = {Track: {$exists: true}};
 
 db.train.find(query).forEach(function(doc) {
-
   // Cast Track to be Int32 type
   doc.Track = new NumberInt(doc.Track);
 
   // Write changes to MongoDB
   db.train.save(doc);
-
 });
 \end{lstlisting}
 
@@ -377,7 +375,7 @@ represented as a String type, mapping the existing numbers to appropriate string
 value will need to be changed, this operation can be performed with the \texttt{db.collection.update()} function, as
 follows:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Performing asynchronous \texttt{update()} operations on ``train'' collection.]
 // Change LoadEmpty = 1 to 'loaded'
 db.train.update(
 
@@ -432,7 +430,7 @@ as filtered out by the query argument. As each update will need to query the col
 to operate on, it would be wise to create a MongoDB index on the \textbf{LoadEmpty} key. This single-key index can be
 created using the following \texttt{db.collection.createIndex()} function:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Creating an index on ``LoadEmpty'' key in ``train'' collection.]
 // Create an ascending index on LoadEmpty field
 db.train.createIndex({LoadEmpty: 1});
 \end{lstlisting}
@@ -448,7 +446,7 @@ to better structure the documents. By default, the CSV importer structures the d
 documents, with all row values being represented as a discrete key-value pair. The default flat structure can be seen as
 follows:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Original ``flat'' document structure.]
 {
   "_id" : ObjectId("5561e94530f853aef8bbfd0c"),
   "Time" : 1094468487.0999999046325684,
@@ -488,7 +486,7 @@ SND sensor values.
 Further restructuring can be done to group the \textbf{Bounce}, \textbf{Rock}, and \textbf{Acc} values into sub-documents
 containing key-value pairs for each, finally ending up with the following document structure:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Improved multi-layered document structure.]
 {
   "_id" : ObjectId("555d30ca33d9d7607772920f"),
   "Time" : 1094468487.0999999046325684,
@@ -525,7 +523,7 @@ containing key-value pairs for each, finally ending up with the following docume
 
 These restructurings could be performed with the following code, in mongo shell for example:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption=Restructuring of documents in ``train'' collection using iterative operation.]
 var updateDocsFunc = function(doc) {
   // Add location nested doc
   doc.Loc = {
@@ -610,9 +608,9 @@ When operations are performed on multiple documents in Mongo, if the documents c
 effectively ignores this and continues to perform the operation on all documents. Generally, specific keys and values
 are passed to operations such as these, hence if the key used does not exist within certain documents, those documents
 simply get ignored from the operation. For example, if a collection contains 100 documents, where only four of those
-documents contain the \textbf{isAdmin} key and an operation is called that depends on the key \textbf{isAdmin}, only
+documents contain the \textbf{isAdmin} key, and an operation is called that depends on the key \textbf{isAdmin}, only
 those four documents within the collection will be operated on. This allows completely differently structured documents
-to be contained within the same collection (however, in a well-structured dataset, multiple collections would be used).
+to be contained within the same collection (however, in a well-designed Mongo database, multiple collections would be used).
 
 Hence, in the IRT case study, if certain sensors break down during operation and are unable to send back data, MongoDB
 will still allow queries and operations to be performed on the overall sensor data. However, if any operations depend on
@@ -629,9 +627,109 @@ to involving unneeded default values in their calculations.
 \subsection{Filtering bad data} % (fold)
 \label{sub:filtering_bad_data}
 
+Often, the sensor readings received by the IRT team contains noisy data, defined by impossible values. For example, often
+the kilometre tracking sensor can return distance values consisting of negative numbers. These are deemed to be bad
+readings, and thus should not be included in any queries that are performed on the data. Hence, this data needs to be
+excluded from the overall dataset in the MongoDB collection.
+
+To exclude such data, it is possible to use MongoDB's provided \texttt{update()} function, which allows the selection
+of noisy data based on a specified predicate. After data has been selected, \texttt{update()} allows the use of the
+\texttt{\$unset} operator to remove specified fields from documents. This allows the other sensor readings in the same
+document to persist in the database, while only removing those readings specified as noisy by the predicate.
+
+This is performed through the following code:
+
+\begin{lstlisting}[caption=MongoDB \texttt{update()} functions to remove data deemed to be noisy from existing documents.]
+// Unset the bad km values (those with values less than 0)
+db.train.update(
+  { km: {$lt: 0} },       // predicate
+  { $unset: {km: 1} },    // operation to perform
+  { multi: true }         // option to specify operation on _all_ matching documents
+);
+
+// Unset all bad speed values (those with values less than 0)
+db.train.update(
+  { speed: {$lt: 0} },
+  { $unset: {speed: 1} },
+  { multi: true }
+);
+
+// Unset all bad LoadEmpty values (those not in valid enum values)
+db.train.update(
+  { LoadEmpty: {$not: {$in: ['unknown', 'empty', 'loaded']} } },
+  { $unset: {LoadEmpty: 1} },
+  { multi: true }
+);
+
+// Unset all bad Track values (those not in range of [0,213841])
+db.train.update(
+  { $or: [ {Track: {$lt: 0}}, {Track: {$gt: 213841}} ] },
+  { $unset: {Track: 1} },
+  { multi: true }
+);
+\end{lstlisting}
+
 % subsection filtering_bad_data (end)
 
 
+\subsection{Ad-hoc adding of additional sensors} % (fold)
+\label{sub:adding_additional_sensors}
+
+In the case of the IRT project, it is very possible that additional sensors could be added at any future stage. For a
+relational database, this would require modification to the table schemas, and possible restructuring operations
+to be performed on existing tables to set values in the columns for the additional sensors. In MongoDB, as documents are
+schema-less, new datasets containing new sensor's data can be serialised as BSON and inserted into existing collections
+at will, without requiring any modifications to the underlying database.
+
+As stated previously, differently structured documents can co-exist in the same collection. Hence, adding datasets
+with additional sensors will simply result in documents being inserted that contain a different number of fields than
+those documents that were previously stored in that collection.
+
+For testing, an additional dataset has been created, based off the original dataset, with the addition of two extra
+sensor fields: \textbf{Temp} and \textbf{Weight}. Documents with the addition of these new sensors simply have two
+additional key-value pairs that are not present in those documents consisting of data from the original dataset. Any
+queries performed that depend on either the \textbf{Temp} or \textbf{Weight} keys will simply only use those documents
+where such values exist for these keys, thus ignoring documents from the original dataset, as touched on in~\sectref{sub:handling_missing_values}.
+
+An example document containing these new fields is shown as follows:
+
+\begin{lstlisting}[caption=Example of a document with extra sensor fields that do not exist in original dataset.]
+{
+  "_id" : ObjectId("556291145946aa793572b39a"),
+  "Time" : 1.09447e+09,
+  "Speed" : 4.4639997480000000,
+  "LoadEmpty" : "unknown",
+  "km" : 5.0096998220000000,
+  "Track" : 2,
+  "CouplerForce" : 23.1613006199999987,
+  "Weight" : 2380,   // new pair
+  "Temp" : 77,       // new pair
+  "Loc" : {
+    "Lat" : -20.6665759599999994,
+    "Lon" : 117.1280811000000028
+  },
+  "Bounce" : {
+    "Front" : -0.0303000000000000,
+    "Rear" : -0.0029600000000000
+  },
+  "Rock" : {
+    "Front" : 0.0383000000000000,
+    "Rear" : 0.0062500000000000
+  },
+  "SND" : {
+    "SND1" : -0.0111000000000000,
+    "SND2" : 0.0001660000000000,
+    "SND3" : undefined,
+    "SND4" : -0.0494000000000000
+  },
+  "Acc" : {
+    "Left" : 0.0000000000000000,
+    "Right" : 0.0000000000000000
+  }
+}
+\end{lstlisting}
+
+% subsection adding_additional_sensors (end)
 
 % section implementation (end)
 
@@ -640,6 +738,9 @@ to involving unneeded default values in their calculations.
 
 \section{Discussion} % (fold)
 \label{sec:discussion}
+
+As most of what has been shown in~\sectref{sec:implementation}, properly setting up the MongoDB database for use with the IRT
+project is not a hard task and only requires relatively trivial MongoDB operations to be performed.
 
 % section evaluation_and_discussion (end)
 
