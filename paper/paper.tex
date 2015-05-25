@@ -223,7 +223,7 @@ references via BSON values containing other document IDs.
 
 Indexing in MongoDB is supported in a similar ways that are present in relational databases. Mongo builds a B-Tree data
 structure on a particular collection's key, allowing all documents within that collection with that key to be accessed
-in $O(log n)$ time, as opposed to $O(n)$ time if unindexed. MongoDB also supports numerous types of indexes, such as
+in $O(log(n))$ time, as opposed to $O(n)$ time if unindexed. MongoDB also supports numerous types of indexes, such as
 single-key, multi-key, geospatial, and hashed indexes.
 
 % subsubsection indexing (end)
@@ -740,7 +740,63 @@ An example document containing these new fields is shown as follows:
 \label{sec:discussion}
 
 As most of what has been shown in~\sectref{sec:implementation}, properly setting up the MongoDB database for use with the IRT
-project is not a hard task and only requires relatively trivial MongoDB operations to be performed.
+project is not a hard task and only requires relatively trivial MongoDB operations to be performed. The overall design
+decisions for the project is the more difficult part of the implementation, and is highly dependant on the use-case
+for the database. Hence, more time generally would be spent on the design of the MongoDB database, and use of the
+mongo shell, or appropriate MongoDB driver/API for a specific programming language, can be used to structure everything.
+
+As noted in~\sectref{sec:mongo_overview}, MongoDB allows for much more advanced operations to be performed, however
+most of the available functions are easy to learn and offer varying amounts of power over given database collections,
+depending how many options the programmer makes use of.
+
+Coming from a object-oriented and functional software engineering background, I found interacting with MongoDB through its provided JavaScript shell
+a very easy task, and far more intuitive than using declarative SQL on a traditional relational database. However, this is merely
+anecdotal, and for a database user with much experience with SQL and the relational data model, using MongoDB, and
+similarly functioning NoSQL databases, may prove to be a difficult task; particularly for those without a lot of imperative programming
+experience. However, as a counter-argument, for basic interaction with MongoDB, scripts can easily be written by
+following the API documentations without requiring a thorough understanding of the underlying programming languages.
+
+A further difference that may catch many users of relational database, is the lack of joins, as noted in~\sectref{ssub:joins}.
+As MongoDB does not natively support multi-document joins, and actively encourages alternative strategies, users will
+need to factor this into their database design decisions, using either nested documents or document references. While this
+reportedly improves query performance, it may add further complexity to the database design for relational database
+users.
+
+Apart from the implementation of the overall design of the IRT MongoDB database, MongoDB also provides functions for
+advanced queries and calculations to be performed on database data. One example of this would be the use of the map
+reduce programming model for calculations on MongoDB data. Shown below is an example of MongoDB's map reduce for
+calculating the total and average distances travelled by trains on each different railway track. This requires more
+advanced used of host programming language features.
+
+\begin{lstlisting}[caption=A basic map reduce implementation to get total and average distance travelled by trains on each track.]
+// Select the Track and km fields from all documents
+var mapFunc = function() {
+  emit(this.Track, this.km);
+};
+
+// Reduces the km values from all mapped documents
+var reduceFunc = function(keyTrack, kms) {
+  return Array.sum(kms);
+};
+
+// Grabs the average of the reduced km values
+var finalizeFunc = function(key, reducedVal) {
+  reducedVal.avg = reducedVal.qty / reducedVal.count;
+
+  return reducedVal;
+};
+
+// Execute the map reduce with the specified functions
+db.train.mapReduce(
+  mapFunc,
+  reduceFunc,
+  {
+    out: 'total_distance',      // Stores output into new 'total_distance' collection
+    query: { km: { $gt: 0 }},   // Excludes bad (< 0) km values
+    finalize: finalizeFunc
+  }
+);
+\end{lstlisting}
 
 % section evaluation_and_discussion (end)
 
@@ -749,6 +805,18 @@ project is not a hard task and only requires relatively trivial MongoDB operatio
 
 \section{Conclusion} % (fold)
 \label{sec:conclusion}
+
+In conclusion, the Monash University Institute of Railway Technology's railway data project has been shown to be possibly
+managed on a non-relational database, MongoDB. We have highlighted the differences in overall database design that have
+to be taken into consideration when implementing the dataset on a non-relational database, and ways the database
+handles special cases that have been proving to be a problem on their current relational model.
+
+Overall, the implementation of their dataset on a non-relational database has been positive, without any major issues that
+would impact the database design in a negative way. The one aspect that would need to be looked at further, would be a
+quantitative evaluation of given queries that are commonly performed on their current relational database, compared with
+the equivalent queries in MongoDB. We have shown that it is very possible and beneficial to use MongoDB with the IRT
+project data, however performance is an important aspect and should be looked into further to allow an informed decision
+to be made.
 
 % section conclusion (end)
 
