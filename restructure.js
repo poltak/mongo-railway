@@ -1,6 +1,7 @@
 /*
 Iteratively restructure default documents by grouping related fields into subdocuments.
  */
+
 var updateDocsFunc = function(doc) {
   // Add location nested doc
   doc.Loc = {
@@ -60,4 +61,3 @@ db.train.createIndex({Loc: '2d'});
 
 // Create an ascending index on km field
 db.train.createIndex({km: 1});
-

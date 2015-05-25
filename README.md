@@ -4,7 +4,8 @@
 
 
 This document describes the contained files in this archive. Note that all operations are performed with the assumption
-of the railway data being stored in the 'train' collection in the 'railway' database.
+of the railway data being stored in the 'train' collection in the 'railway' database. Furthermore, all javascript
+code can be executed directly in the native mongo shell.
 
 All of the operations performed in source files in this archive is documented more thoroughly in the report for
 assessment task 3.
@@ -28,10 +29,9 @@ mongoimport structures the data as "flat" documents, without any real structure,
 values are performed in this file.
 
 
-## mapreduce.js
-Map reduce example to show querying and processing capabilities in Mongo.
-
-
 ## baddata.js
 Shows how noisy data was discovered and discarded from original dataset.
 
+
+## mapreduce.js
+Map reduce example to show querying and processing capabilities in Mongo.
